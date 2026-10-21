@@ -1,0 +1,15 @@
+Bank Pilot v5.0n — neural-opponent edition
+
+Training uses only current, historical and independently initialized neural policies. Exact dice/target probability calculations, larger-target bounds and proven decision rules remain unchanged. There is no scripted training opponent, teacher warm-up or imitation loss.
+
+Default collection is 64 games. Six batches out of eight train the main network; one trains an independent explorer against the archive; one trains a specialist against a frozen neural target. Each learner has its own optimizer. Main Episodes excludes specialist games; total league games includes them. A challenger refreshes after 24 specialist updates, alternating main-weight and fresh starts. Snapshots retain earlier and specialist policies.
+
+Unforced actions sample learned probabilities during training, neural evaluation and Play. Repainting the same decision does not redraw the advice. PPO uses terminal first-place shares, full-horizon advantages, entropy regularization and existing KL/gradient guards. Paired feedback checks up to two sampled positions per worker using frozen neural continuations. Banking receives no artificial reward.
+
+Neural benchmarks pair candidate and champion dice, seats, opponents and state-keyed action randomness. A frozen reference archive and rotating challenge pool remain separate. Progress reports tied-first and all-zero games. Improvements require fresh confirmation. This is a new neural benchmark protocol; it is not comparable to the old deterministic league.
+
+Select Original scripts in Training options for the unchanged bankbench-46 benchmark. It retains all original opponent distributions, seeds, dice, seats, greedy candidate choices and exact rules, allowing comparison with previous networks. It is a compatibility score, not a measurement of the sampled policy used on Play. Scripted tests never generate training data or imitation labels.
+
+This edition has its own saved training slot. Existing checkpoints can be imported with compatible weights, optimizers and scripted history. Previous deterministic-league history is retained in exported previousLeague data and is not joined to new neural results. Export before resetting or replacing website files. Inference and training run offline after the full app has been cached. Keep the app open while training.
+
+The package starts untrained. Runtime and mathematical checks do not establish improved playing strength or convergence to an equilibrium.

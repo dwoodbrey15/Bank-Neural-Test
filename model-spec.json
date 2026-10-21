@@ -1,0 +1,273 @@
+{
+  "schema": "banknet-2",
+  "version": "5.0n",
+  "runtime": "Offline JavaScript, float32 arrays and Web Workers; no external libraries",
+  "tableSizes": {
+    "min": 2,
+    "max": 12
+  },
+  "roundLengths": [
+    10,
+    15,
+    20
+  ],
+  "parameterCount": 45316,
+  "architecture": {
+    "opponentEncoder": [
+      32,
+      48,
+      48
+    ],
+    "globalFeatures": 44,
+    "opponentResidual": true,
+    "attentionHeads": 2,
+    "attention": "Two independent global queries (44 -> 96), tanh, scaled dot-product softmax over opponent embeddings",
+    "pooling": [
+      "mean",
+      "max",
+      "attention head 1",
+      "attention head 2",
+      "active opponent mean"
+    ],
+    "pooledWidth": 284,
+    "trunk": [
+      284,
+      96,
+      96
+    ],
+    "trunkResidual": true,
+    "output": [
+      96,
+      4
+    ],
+    "outputs": [
+      "bankPolicyPreference",
+      "trainingPolicyWinShare",
+      "sampledBankActionValue",
+      "sampledContinueActionValue"
+    ],
+    "valuePrior": "sigmoid(logit - log(opponentCount)); zero logits give 1/playerCount",
+    "actionSelection": "Sample learned BANK probability outside mathematically proven rules. Stable sampled advice per decision state. Original scripted compatibility test retains legacy greedy selection."
+  },
+  "globals": [
+    "asinh(pot/100)/4",
+    "remainingRounds/20",
+    "totalRounds/20",
+    "round/20",
+    "playerCount/12",
+    "activeFraction",
+    "safePhase",
+    "asinh(rollCount)/4",
+    "normalizedOwnScore",
+    "normalizedHighestRivalGap",
+    "normalizedPotMinusStrictLeadTarget",
+    "ownActive",
+    "nextBustProbability",
+    "doublesProbability",
+    "strictLeadReachLower",
+    "strictLeadReachUpper",
+    "strictLeadReachExact",
+    "tieTargetReachLower",
+    "tieTargetReachUpper",
+    "nextDangerRollStrictLeadProbability",
+    "bankingWouldStrictlyLead",
+    "rivalsAheadFraction",
+    "activeRivalsAheadFraction",
+    "normalizedHighestActiveRivalGap",
+    "lastBankExists",
+    "rankFraction",
+    "winShareIfBustNow",
+    "normalizedHighestBankedRivalGap",
+    "finalRound",
+    "lastActive",
+    "tiedWithHighestRival",
+    "highestRivalTieFraction",
+    "fairShareBaseline",
+    "activeRivalFraction",
+    "fractionRivalsBelowBankNowScore",
+    "winShareIfEveryoneBanksCurrentPot",
+    "normalizedPotentialLeaderGap",
+    "doublePotReachLower",
+    "doublePotReachUpper",
+    "meanNormalizedRivalGap",
+    "activeRivalsTiedOrAheadFraction",
+    "logRemainingRoundsAfterThis",
+    "lastBankIsOwnSeat",
+    "reachStrictlyAheadOfBankedRivalsLower"
+  ],
+  "opponentFeatures": [
+    "normalizedScoreGap",
+    "active",
+    "normalizedBankedThisRound",
+    "rivalBankWindowOpen",
+    "lastBankActor",
+    "rivalIsCurrentHighestScore",
+    "reachAheadOfRivalLower",
+    "reachAheadOfRivalUpper",
+    "sameCurrentScore",
+    "normalizedPotentialScoreGap",
+    "log1p(modelObservations)/6",
+    "smoothedBankRate",
+    "meanNormalizedBankPot",
+    "stdNormalizedBankPot",
+    "normalizedLastBankPot",
+    "posteriorFixed",
+    "posteriorAdaptive",
+    "posteriorChaser",
+    "posteriorReactive",
+    "posteriorMatcher",
+    "posteriorStrategic",
+    "posteriorNoisy",
+    "posteriorExpectedLogBase/8",
+    "posteriorEntropy/log(77)",
+    "reachAheadOfRivalExact",
+    "modeledBankChanceNow",
+    "modeledBankChanceAfterDouble",
+    "modeledBankChanceStdAcrossHypotheses",
+    "bankNowWouldPassRival",
+    "ownCurrentScoreStrictlyAhead",
+    "activeRivalTiedOrAhead",
+    "observationConfidenceCappedAt30"
+  ],
+  "exactFeatures": {
+    "targetRecurrence": "h(p) = [6*h(2p) + sum(count[s]*h(p+s))]/36, h(p>=target)=1; bust contribution is zero",
+    "nonDoubleSums": [
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11
+    ],
+    "counts": [
+      2,
+      2,
+      4,
+      4,
+      4,
+      4,
+      2,
+      2
+    ],
+    "exactTargetLimit": 2048,
+    "largerTargets": "Integer grid lower/upper bounds, approximately 512 cells",
+    "cacheEntries": 96,
+    "scoreArithmetic": "Safe integer Number, then BigInt promotion",
+    "ruleOverrides": [
+      "Final-round last-active optimal stopping",
+      "Two-player strict-lead preservation by public bank matching",
+      "Final-round strict-lead shadowing with one active rival"
+    ]
+  },
+  "training": {
+    "algorithm": "Neural population PPO with independent explorer and frozen-target challenger",
+    "reward": "Terminal first place 1; k-way first-place tie 1/k; otherwise 0",
+    "gamma": 1,
+    "gaeLambda": 1,
+    "valueTargets": "Terminal first-place shares; full-horizon return minus value advantages normalize within each table size over non-forced decisions",
+    "policyClip": 0.2,
+    "entropyCoefficient": "max(0.006, 0.02/sqrt(1 + samples/3000000))",
+    "valueLoss": "0.5 * binary cross entropy; chosen-action auxiliary loss 0.2 * binary cross entropy",
+    "optimizer": "Adam with gradient norm clip 0.5",
+    "learningRate": 5e-05,
+    "perWorkerBatchSize": 48,
+    "epochs": 2,
+    "earlyStop": "Sampled PPO KL >0.025 before steps; full-batch Bernoulli KL after epochs stops at 0.01 and restores epoch weights plus optimizer above 0.025",
+    "warmStart": null,
+    "imitationAfterWarmup": 0,
+    "selfPlay": "Every opponent is a network. 15% all-current tables outside challenger batches. Remaining seats sample frozen neural policies. Main favors measured difficulties; explorer samples uniformly; challenger faces one frozen target.",
+    "syntheticMidgameFraction": 0.1,
+    "syntheticStates": "Random round and independent scores, scale 10^2 to 10^7, same game rules",
+    "snapshotInterval": 12,
+    "maxSnapshots": 12,
+    "parallelism": "Six of eight synchronous batches update the main network; one updates an independent explorer; one updates a specialist challenger. Each learner has its own optimizer. Each batch uses 1/2/4/6 data-parallel workers.",
+    "storageKey": "current-banknet-neural-only-1; existing Bank Net slots retained",
+    "checkpoint": "Main and both specialists with independent optimizers, founder archive, frozen target, champions, histories and resumable benchmark blocks",
+    "gamesPerCollection": 64,
+    "pairedFeedback": {
+      "inferenceCostAdded": 0,
+      "defaultWorlds": 2,
+      "options": [
+        0,
+        2,
+        4
+      ],
+      "maxPositionsPerWorkerBatch": 2,
+      "sampling": "Uniform reservoir over games, then over non-forced current-policy positions within each selected game; both continuations use neural opponents and proven rules",
+      "evaluation": "Both first actions roll to terminal results using frozen lineup policies, identical future dice addressing and common opponent noise; paired worlds use a marginal-preserving 18-face antithetic shift",
+      "targets": "Both action-value heads receive empirical win-share targets; clipped, shrunken expected-action policy gradient supplements PPO",
+      "globalAuxiliaryWeight": 0.08,
+      "shrink": "worlds/(worlds+2)",
+      "replay": "No old PPO trajectories reused",
+      "episodeCounter": "Counts collected full games only; branch continuations tracked separately"
+    }
+  },
+  "evaluation": {
+    "games": [
+      132,
+      660,
+      1800,
+      10000
+    ],
+    "cells": "Selected player counts x 10/15/20 rounds, half frozen neural reference and half rotating neural challengers",
+    "reference": "Three independently initialized founders plus selected available historical networks, frozen at first neural benchmark",
+    "comparison": "Candidate and incumbent use sampled neural decisions with exact probability inputs and proven rules. Dice, lineups, seats and state-keyed random action draws are paired. Independent fresh fixtures confirm promotions. Original scripted bankbench-46 remains unchanged as a separate deterministic compatibility test.",
+    "status": "Exploratory; not proof of strength",
+    "defaultGames": 10000,
+    "protocol": "bankleague-neural-1",
+    "diagnostics": [
+      "tied-first fraction",
+      "all-zero score fraction",
+      "mean total bank actions",
+      "candidate opening banks per game"
+    ]
+  },
+  "status": "Experimental and initially untrained. Capacity, mathematical and runtime tests do not establish superiority over v3.5.",
+  "trainerStability": {
+    "version": "5.0n",
+    "defaultRange": [
+      3,
+      8
+    ],
+    "gamesPerBatch": 64,
+    "fineTuneLR": 5e-05,
+    "warmupLR": null,
+    "epochFullBernoulliKLStop": 0.01,
+    "epochFullBernoulliKLRollback": 0.025,
+    "maxSnapshots": 12,
+    "benchmarkGames": 10000,
+    "autoBenchmarkEpisodes": 3600,
+    "promotion": "paired 95% positive delta on fixed and independent fresh fixtures",
+    "regression": "Retain protected champion; do not automatically discard current training weights",
+    "parameterCountUnchanged": 45316
+  },
+  "benchmark": {
+    "default": "sampled historical neural league",
+    "scriptedProtocol": "bankbench-46 (unchanged)",
+    "leagueProtocol": "bankleague-neural-1",
+    "fixedReferenceLimit": 6,
+    "historicalSnapshots": 12,
+    "pairedConfirmation": true,
+    "automaticLearnerRollback": false
+  },
+  "population": {
+    "independentFounderPolicies": 3,
+    "batchRoles": [
+      "main",
+      "main",
+      "main",
+      "main",
+      "main",
+      "main",
+      "explorer",
+      "exploiter"
+    ],
+    "specialistSnapshotInterval": 4,
+    "challengerRefreshInterval": 24,
+    "challengerTarget": "Frozen main or confirmed neural champion",
+    "challengerRestart": "Alternates transferred main weights and independent random initialization",
+    "guarantee": "No convergence or strength guarantee for multiplayer Bank"
+  }
+}
